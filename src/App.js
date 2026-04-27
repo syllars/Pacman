@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useCallback, memo } from "react";
+import { useEffect, useReducer, useRef, useCallback, memo, useState } from "react";
 
 // constants
 const TILE_SIZE = 30;
@@ -16,6 +16,7 @@ const empty = 0;
 const wall  = 1;
 const dot   = 2;
 const power = 3;
+const portal = 4;
 
 const board_template = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -25,13 +26,13 @@ const board_template = [
   [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
   [1,2,1,1,2,1,2,1,1,1,1,1,1,1,2,1,2,1,1,2,1],
   [1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1],
-  [1,1,1,1,2,1,1,1,0,0,1,0,0,1,1,1,2,1,1,1,1],
+  [1,1,1,1,2,1,1,1,0,1,1,1,0,1,1,1,2,1,1,1,1],
   [1,1,1,1,2,1,0,0,0,0,0,0,0,0,0,1,2,1,1,1,1],
-  [1,1,1,1,2,1,0,1,1,0,0,0,1,1,0,1,2,1,1,1,1],
-  [0,0,0,0,2,0,0,1,0,0,0,0,0,1,0,0,2,0,0,0,0],
+  [1,1,1,1,2,1,0,1,1,0,1,0,1,1,0,1,2,1,1,1,1],
+  [4,0,0,0,0,2,0,0,1,0,0,0,0,0,1,0,0,2,0,0,0,0,4],
   [1,1,1,1,2,1,0,1,1,1,1,1,1,1,0,1,2,1,1,1,1],
   [1,1,1,1,2,1,0,0,0,0,0,0,0,0,0,1,2,1,1,1,1],
-  [1,1,1,1,2,1,0,0,1,1,1,1,1,0,0,1,2,1,1,1,1],
+  [1,1,1,1,2,1,0,1,1,1,1,1,1,1,0,1,2,1,1,1,1],
   [1,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,1],
   [1,2,1,1,2,1,1,1,2,1,1,1,2,1,1,1,2,1,1,2,1],
   [1,3,2,1,2,2,2,2,2,2,0,2,2,2,2,2,2,1,2,3,1],
@@ -58,32 +59,109 @@ function buildDots() {
   return dots;
 }
 
+function checkWall(next_x, next_y) {
+  const index_x = Math.round((next_x/TILE_SIZE)-0.5);
+  const index_y = Math.round((next_y/TILE_SIZE)-0.5);
+  if (board_template[index_y][index_x] === 1) {
+    return "wall";
+  }
+  else {
+    if (index_y === 10 && (index_x === 0 || index_x === 20)) {
+      return "loop"
+    }
+    else {
+      return "free";
+    }
+  }
+}
 
-// This will change the state of pacman and it's friends
-function gameReducer(pacman) {
-
+function nextPos(prev, direction) {
+  const speed = 5;
+  let next_x = prev.circle1.x;
+  let next_y = prev.circle1.y;
+  if (direction === "up") {
+    if (checkWall(next_x, next_y - 20) === "free") {
+      next_y = next_y - speed;
+    }
+  }
+  else if (direction === "down") {
+    if (checkWall(next_x, next_y + 15) === "free") {
+      next_y = next_y + speed;
+    }
+  }
+  else if (direction === "left") {
+    if (checkWall(next_x - 20, next_y) === "free") {
+      next_x = next_x - speed;
+    }
+    else if (checkWall(next_x - 20, next_y) === "loop") {
+      next_x = 585;
+    }
+  }
+  else if (direction === "right") {
+    if (checkWall(next_x + 15, next_y) === "free") {
+      next_x = next_x + speed;
+    }
+    else if (checkWall(next_x + 15, next_y) === "loop") {
+      next_x = 15;
+    }
+  }
+  return [next_x, next_y];
 }
 
 export default function Game() {
-  const [pacman, setPacman] = useState({x:0, y:0, dir: "right", mouthOpen: True});
+   const [objects, setObjects] = useState({
+    circle1: { x: 315, y: 495 },
+  });
+  const direction_x = useRef(0);
+  const direction_y = useRef(0);
+  const direction = useRef(0);
 
   useEffect(() => {
-    const handleKey = (e) => {
-      const map = {
-        ArrowUp:    dir.up,
-        ArrowDown:  dir.down,
-        ArrowLeft:  dir.left,
-        ArrowRight: dir.right,
-        w: dir.up, s: dir.down, a: dir.left, d: dir.right,
-      };
+    function handleKeyDown(e) {
+      if (e.key === "ArrowUp") {direction.current = "up";}
+      if (e.key === "ArrowDown") {direction.current = "down";}
+      if (e.key === "ArrowLeft") {direction.current = "left";}
+      if (e.key === "ArrowRight") {direction.current = "right";}
     }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setObjects(prev => {
+        const [next_x, next_y] = nextPos(prev, direction.current);
+        return {
+          circle1: { x: next_x, y: next_y }
+        }
+      });
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, []);
+
+/*
   return (
     <div>
         <Board dots={buildDots()} />
-        <PacmanSprite x={pacman.x} y={pacman.y} dir={pacman.dir} mouthOpen={pacman.mouthOpen}/>
     </div>
   );
+*/
+return (
+  <div>
+    <Board dots={buildDots()} />
+    <div style={{
+      position: "absolute",
+      left: objects.circle1.x,
+      top: objects.circle1.y,
+      transform: "translate(-50%, -50%)",
+      width: 22, height: 22,
+      borderRadius: "50%",
+      background: "#FFD700"
+    }} />
+  </div>
+
+);
 }
 
 // memo cuts unnessesary rerenders
@@ -131,6 +209,7 @@ const Cell = memo(function Cell({ x, y, type, hasDot }) {
   );
 });
 
+/*
 function PacmanSprite({x, y, dir, mouthOpen}) {
   // have to convert objects into strings
   const rotationMap = {
@@ -163,7 +242,7 @@ function PacmanSprite({x, y, dir, mouthOpen}) {
     }}></div>
   )
 }
-
+*/
 
 
 
@@ -186,8 +265,5 @@ const styles = {
     background: "#FFD700",
     boxShadow: "0 0 6px #FFD700",
     animation: "pulse 0.5s ease-in-out infinite alternate",
-  },
-  pacman: {
-    
   },
 };
