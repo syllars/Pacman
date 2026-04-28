@@ -1,0 +1,76 @@
+/* Board cells */
+.cell {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background: #000;
+  box-sizing: border-box;
+}
+
+.cell-wall {
+  background: #1a1aff;
+  border: 1px solid #3333ff;
+}
+
+/* Food */
+.dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #FFD700;
+}
+
+.power-pellet {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #FFD700;
+  box-shadow: 0 0 6px #FFD700;
+  animation: pulse 0.5s ease-in-out infinite alternate;
+}
+
+/* Pacman */
+.pacman {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #FFD700;
+}
+
+/* Ghost */
+
+.ghost {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 30px 30px 10px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ghost__eyes {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.ghost__eye {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: black;
+}
