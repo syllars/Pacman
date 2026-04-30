@@ -62,39 +62,75 @@ function checkWall(next_x, next_y) {
   }
 }
 
-function nextPos(next_x, next_y, direction) {
+function nextPos(next_x, next_y, direction, is_ghost) {
   const speed = 5;
+  const dirs = ["up", "down", "right", "left"];
+  const at_intersection = "need logic to find when at intersection";
+  const wall_up = checkWall(next_x, next_y - 20);
+  const wall_down = checkWall(next_x, next_y + 15);
+  const wall_left = checkWall(next_x - 20, next_y);
+  const wall_right = checkWall(next_x + 15, next_y);
+
+  if (is_ghost && at_intersection) {
+    const validDirs = dirs.filter(dir => {
+      if (dir === "up") return !checkWall(wall_up);
+      if (dir === "down") return !checkWall(wall_down);
+      if (dir === "left") return !checkWall(wall_left);
+      if (dir === "right") return !checkWall(wall_right);
+    })
+    if (validDirs > 0) {
+      direction = validDirs[Math.floor(Math.random() * validDirs.length)];
+    }
+  }
+
   if (direction === "up") {
-    if (!checkWall(next_x, next_y - 20)) {
+    if (!wall_up) {
       next_y = next_y - speed;
       next_x = Math.floor(next_x/TILE_SIZE) * TILE_SIZE + TILE_SIZE/2;
     }
+    if (is_ghost) {
+      direction = dirs[Math.floor(Math.random() * dirs.length)];
+    }
   }
   else if (direction === "down") {
-    if (!checkWall(next_x, next_y + 15)) {
+    if (!wall_down) {
       next_y = next_y + speed;
       next_x = Math.floor(next_x/TILE_SIZE) * TILE_SIZE + TILE_SIZE/2;
     }
+    if (is_ghost) {
+      direction = dirs[Math.floor(Math.random() * dirs.length)];
+    }
   }
   else if (direction === "left") {
-    if (!checkWall(next_x - 20, next_y)) {
+    if (!wall_left) {
       next_x = next_x - speed;
       next_y = Math.floor(next_y/TILE_SIZE) * TILE_SIZE + TILE_SIZE/2;
       if (next_x < 0) {
         next_x = columns * TILE_SIZE;
       }
     }
+    if (is_ghost) {
+      direction = dirs[Math.floor(Math.random() * dirs.length)];
+    }
   }
   else if (direction === "right") {
-    if (!checkWall(next_x + 15, next_y)) {
+    if (!wall_right) {
       next_x = next_x + speed;
       next_y = Math.floor(next_y/TILE_SIZE) * TILE_SIZE + TILE_SIZE/2;
       if (next_x > columns * TILE_SIZE) {
         next_x = 0;
       }
     }
+    if (wall_right && is_ghost) {
+      direction = dirs[Math.floor(Math.random() * dirs.length)];
+    }
   }
-  return [next_x, next_y];
+  if (!is_ghost) {
+    return [next_x, next_y];
+  }
+  else {
+    return [next_x, next_y, direction];
+  }
 }
   
 export default function Game() {
@@ -130,15 +166,16 @@ export default function Game() {
   useEffect(() => {
     const interval = setInterval(() => {
       setObjects(prev => {
-        const [next_x_pac, next_y_pac] = nextPos(prev.pacman.x, prev.pacman.y, prev.pacman.dir);
-        for (const ghost in prev.ghosts) {
-          const [next_x_ghost, next_y_ghost] = nextPos(ghost.x, ghost.y, ghost.dir);
-        }
+        const [next_x_pac, next_y_pac] = nextPos(prev.pacman.x, prev.pacman.y, prev.pacman.dir, false);
+        const updatedGhosts = prev.ghosts.map(ghost => {
+          const [next_x_ghost, next_y_ghost, next_dir_ghost] = nextPos(ghost.x, ghost.y, ghost.dir, true);
+          return { x: next_x_ghost, y: next_y_ghost, dir: next_dir_ghost };
+        });
+
         return {
           ...prev,
           pacman: { ...prev.pacman, x: next_x_pac, y: next_y_pac },
-          /// Here need to loop through the ghosts and return them but can't
-          /// use a for loop in a return.
+          ghosts: updatedGhosts
         };
       });
     }, 50);
