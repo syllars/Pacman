@@ -62,33 +62,45 @@ function checkWall(next_x, next_y) {
   }
 }
 
-function nextPos(next_x, next_y, direction, is_ghost) {
+function nextPos(next_x, next_y, direction, is_ghost, ghost_scripts, move_count) {
   const speed = 5;
   const dirs = ["up", "down", "right", "left"];
-  const at_intersection = "need logic to find when at intersection";
+  const opposites = { up: "down", down: "up", left: "right", right: "left" };
+
+  const atTileBoundaryX = Math.abs(next_x - (Math.floor(next_x / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2)) < speed;
+  const atTileBoundaryY = Math.abs(next_y - (Math.floor(next_y / TILE_SIZE) * TILE_SIZE + TILE_SIZE / 2)) < speed;
+  const atIntersection = atTileBoundaryX && atTileBoundaryY;
+
   const wall_up = checkWall(next_x, next_y - 20);
   const wall_down = checkWall(next_x, next_y + 15);
   const wall_left = checkWall(next_x - 20, next_y);
   const wall_right = checkWall(next_x + 15, next_y);
 
-  if (is_ghost && at_intersection) {
-    const validDirs = dirs.filter(dir => {
-      if (dir === "up") return !checkWall(wall_up);
-      if (dir === "down") return !checkWall(wall_down);
-      if (dir === "left") return !checkWall(wall_left);
-      if (dir === "right") return !checkWall(wall_right);
-    })
-    if (validDirs > 0) {
-      direction = validDirs[Math.floor(Math.random() * validDirs.length)];
+  if (is_ghost && atIntersection) {
+    if (move_count < ghost_scripts.length) {
+      direction = ghost_scripts[move_count];
+      move_count++;
+    }
+    else {
+      const validDirs = dirs.filter(dir => {
+        if (dir === opposites[direction]) return false;
+        if (dir === "up") return !wall_up;
+        if (dir === "down") return !wall_down;
+        if (dir === "left") return !wall_left;
+        if (dir === "right") return !wall_right;
+        return false;
+      })
+      if (validDirs.length > 0) {
+        direction = validDirs[Math.floor(Math.random() * validDirs.length)];
+      } 
     }
   }
-
   if (direction === "up") {
     if (!wall_up) {
       next_y = next_y - speed;
       next_x = Math.floor(next_x/TILE_SIZE) * TILE_SIZE + TILE_SIZE/2;
     }
-    if (is_ghost) {
+    else if (is_ghost) {
       direction = dirs[Math.floor(Math.random() * dirs.length)];
     }
   }
@@ -129,18 +141,25 @@ function nextPos(next_x, next_y, direction, is_ghost) {
     return [next_x, next_y];
   }
   else {
-    return [next_x, next_y, direction];
+    return [next_x, next_y, direction, move_count];
   }
 }
+
+const ghost_scripts = [
+    ["right", "up", "up", "left", "left"], 
+    ["up", "up", "left"], 
+    ["up", "up", "right"],
+    ["left", "up", "up", "right"], 
+  ];
   
 export default function Game() {
   const [objects, setObjects] = useState({
     pacman: { x: 315, y: 495, dir: "" },
     ghosts: [
-      { x: 255, y: 315, dir: "right" },
-      { x: 285, y: 315, dir: "up" },
-      { x: 345, y: 315, dir: "up" },
-      { x: 375, y: 315, dir: "left" },
+      { x: 255, y: 315, dir: "right", move_count: 0 },
+      { x: 285, y: 315, dir: "up", move_count: 0 },
+      { x: 345, y: 315, dir: "up", move_count: 0 },
+      { x: 375, y: 315, dir: "left", move_count: 0 },
     ],
   });
 
@@ -167,9 +186,9 @@ export default function Game() {
     const interval = setInterval(() => {
       setObjects(prev => {
         const [next_x_pac, next_y_pac] = nextPos(prev.pacman.x, prev.pacman.y, prev.pacman.dir, false);
-        const updatedGhosts = prev.ghosts.map(ghost => {
-          const [next_x_ghost, next_y_ghost, next_dir_ghost] = nextPos(ghost.x, ghost.y, ghost.dir, true);
-          return { x: next_x_ghost, y: next_y_ghost, dir: next_dir_ghost };
+        const updatedGhosts = prev.ghosts.map((ghost, index) => {
+          const [next_x_ghost, next_y_ghost, next_dir_ghost, next_move_count] = nextPos(ghost.x, ghost.y, ghost.dir, true, ghost_scripts[index], ghost.move_count);
+          return { x: next_x_ghost, y: next_y_ghost, dir: next_dir_ghost, move_count: next_move_count };
         });
 
         return {
