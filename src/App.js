@@ -109,7 +109,7 @@ function nextPos(next_x, next_y, direction, is_ghost, ghost_scripts, move_count)
       next_y = next_y + speed;
       next_x = Math.floor(next_x/TILE_SIZE) * TILE_SIZE + TILE_SIZE/2;
     }
-    if (is_ghost) {
+    else if (is_ghost) {
       direction = dirs[Math.floor(Math.random() * dirs.length)];
     }
   }
@@ -121,7 +121,7 @@ function nextPos(next_x, next_y, direction, is_ghost, ghost_scripts, move_count)
         next_x = columns * TILE_SIZE;
       }
     }
-    if (is_ghost) {
+    else if (is_ghost) {
       direction = dirs[Math.floor(Math.random() * dirs.length)];
     }
   }
@@ -133,7 +133,7 @@ function nextPos(next_x, next_y, direction, is_ghost, ghost_scripts, move_count)
         next_x = 0;
       }
     }
-    if (wall_right && is_ghost) {
+    else if (is_ghost) {
       direction = dirs[Math.floor(Math.random() * dirs.length)];
     }
   }
@@ -146,11 +146,24 @@ function nextPos(next_x, next_y, direction, is_ghost, ghost_scripts, move_count)
 }
 
 const ghost_scripts = [
-    ["right", "up", "up", "left", "left"], 
+    ["right", "up", "up", "left"], 
     ["up", "up", "left"], 
     ["up", "up", "right"],
     ["left", "up", "up", "right"], 
   ];
+
+function checkFood(food, next_x, next_y) {
+  const index_x = Math.round((next_x/TILE_SIZE)-0.5);
+  const index_y = Math.round((next_y/TILE_SIZE)-0.5);
+  const key = `${index_x},${index_y}`;
+  if (food.has(key)) {
+    const newFood = new Set(food);
+    newFood.delete(key);
+    const points = board_template[index_y][index_x] === power ? 50 : 10;
+    return [newFood, points];
+  }
+  return [food, 0]
+}
   
 export default function Game() {
   const [objects, setObjects] = useState({
@@ -162,6 +175,7 @@ export default function Game() {
       { x: 375, y: 315, dir: "left", move_count: 0 },
     ],
   });
+  const [food, setFood] = useState(() => buildDots());
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -186,6 +200,11 @@ export default function Game() {
     const interval = setInterval(() => {
       setObjects(prev => {
         const [next_x_pac, next_y_pac] = nextPos(prev.pacman.x, prev.pacman.y, prev.pacman.dir, false);
+        setFood(prevFood => {
+          const [newFood, points] = checkFood(prevFood, next_x_pac, next_y_pac);
+          return newFood;
+        });
+
         const updatedGhosts = prev.ghosts.map((ghost, index) => {
           const [next_x_ghost, next_y_ghost, next_dir_ghost, next_move_count] = nextPos(ghost.x, ghost.y, ghost.dir, true, ghost_scripts[index], ghost.move_count);
           return { x: next_x_ghost, y: next_y_ghost, dir: next_dir_ghost, move_count: next_move_count };
@@ -204,7 +223,7 @@ export default function Game() {
 
   return (
     <div>
-      <Board dots={buildDots()} />
+      <Board dots={food} />
       <div
         className="pacman"
         style={{ left: objects.pacman.x, top: objects.pacman.y }}
