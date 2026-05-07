@@ -1,5 +1,6 @@
 import "./styles.css";
 import { useEffect, useReducer, useRef, useCallback, memo, useState } from "react";
+<link href="https://googleapis.com" rel="stylesheet"></link>
 
 // constants
 const TILE_SIZE = 30;
@@ -159,7 +160,7 @@ function checkFood(food, next_x, next_y) {
   if (food.has(key)) {
     const newFood = new Set(food);
     newFood.delete(key);
-    const points = board_template[index_y][index_x] === power ? 50 : 10;
+    const points = board_template[index_y][index_x] === power ? 25 : 5;
     return [newFood, points];
   }
   return [food, 0]
@@ -176,6 +177,9 @@ export default function Game() {
     ],
   });
   const [food, setFood] = useState(() => buildDots());
+  const [score, setScore] = useState(0);
+  const [started, setStarted] = useState(false);
+  const [lost, setLost] = useState(false);
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -185,6 +189,9 @@ export default function Game() {
         ArrowLeft: "left",
         ArrowRight: "right",
       };
+      if (e.key === " ") {
+        setStarted(true);
+      }
       if (dirMap[e.key]) {
         setObjects(prev => ({
           ...prev,
@@ -197,18 +204,33 @@ export default function Game() {
   }, []);
 
   useEffect(() => {
+    if (!started || lost) return;
     const interval = setInterval(() => {
       setObjects(prev => {
         const [next_x_pac, next_y_pac] = nextPos(prev.pacman.x, prev.pacman.y, prev.pacman.dir, false);
         setFood(prevFood => {
           const [newFood, points] = checkFood(prevFood, next_x_pac, next_y_pac);
+          if (points > 0) setScore(s => s + points);
+          if (newFood.size === 0) {
+            setStarted(false);
+          }
           return newFood;
         });
 
         const updatedGhosts = prev.ghosts.map((ghost, index) => {
           const [next_x_ghost, next_y_ghost, next_dir_ghost, next_move_count] = nextPos(ghost.x, ghost.y, ghost.dir, true, ghost_scripts[index], ghost.move_count);
+          
+          const dx = next_x_ghost - next_x_pac;
+          const dy = next_y_ghost - next_y_pac;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < TILE_SIZE * 0.8) {
+            setLost(true);
+          }
+
           return { x: next_x_ghost, y: next_y_ghost, dir: next_dir_ghost, move_count: next_move_count };
         });
+
+
 
         return {
           ...prev,
@@ -219,28 +241,41 @@ export default function Game() {
     }, 50);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [started, lost]);
 
   return (
-    <div>
-      <Board dots={food} />
-      <div
-        className="pacman"
-        style={{ left: objects.pacman.x, top: objects.pacman.y }}
-      />
-
-      {objects.ghosts.map((ghost, index) => (
-        <div
-          key={index}
-          className="ghost"
-          style={{ left: ghost.x, top: ghost.y }}
-        >
-          <div className="ghost__eyes">
-            <div className="ghost__eye" />
-            <div className="ghost__eye" />
-          </div>
+    <div style={{ display: "flex", gap: "20px", background: "black" }}>
+      
+      <div style={{ position: "relative", width: columns * TILE_SIZE, height: rows * TILE_SIZE }}>
+        <div className="board">
+          <Board dots={food} />
         </div>
-      ))}
+        <div className="pacman" 
+        style={{ left: objects.pacman.x, top: objects.pacman.y }} />
+
+        {objects.ghosts.map((ghost, index) => (
+          <div key={index} className="ghost" style={{ left: ghost.x, top: ghost.y }}>
+            <div className="ghost__eyes">
+              <div className="ghost__eye" />
+              <div className="ghost__eye" />
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {!started && (
+        <div className="start-screen">
+          <div className="start-screen__title">PAC-MAN</div>
+          <div className="start-screen__subtitle">By Sylvia</div>
+          <div className="start-screen__prompt">PRESS SPACE TO START</div>
+        </div>
+      )}
+
+      <div className="scoreboard">
+        <div className="scoreboard__label">SCORE</div>
+        <div className="scoreboard__value">{score}</div>
+      </div>
+
     </div>
   );
 }
