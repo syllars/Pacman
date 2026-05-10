@@ -180,6 +180,9 @@ export default function Game() {
   const [score, setScore] = useState(0);
   const [started, setStarted] = useState(false);
   const [lost, setLost] = useState(false);
+  const [won, setWon] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -204,7 +207,7 @@ export default function Game() {
   }, []);
 
   useEffect(() => {
-    if (!started || lost) return;
+    if (!started || lost || won) return;
     const interval = setInterval(() => {
       setObjects(prev => {
         const [next_x_pac, next_y_pac] = nextPos(prev.pacman.x, prev.pacman.y, prev.pacman.dir, false);
@@ -212,7 +215,7 @@ export default function Game() {
           const [newFood, points] = checkFood(prevFood, next_x_pac, next_y_pac);
           if (points > 0) setScore(s => s + points);
           if (newFood.size === 0) {
-            setStarted(false);
+            setWon(true);
           }
           return newFood;
         });
@@ -241,15 +244,15 @@ export default function Game() {
     }, 50);
 
     return () => clearInterval(interval);
-  }, [started, lost]);
+  }, [started, lost, won]);
 
   return (
     <div style={{ display: "flex", gap: "20px", background: "black" }}>
       
       <div style={{ position: "relative", width: columns * TILE_SIZE, height: rows * TILE_SIZE }}>
-        <div className="board">
+        
           <Board dots={food} />
-        </div>
+        
         <div className="pacman" 
         style={{ left: objects.pacman.x, top: objects.pacman.y }} />
 
@@ -261,9 +264,15 @@ export default function Game() {
             </div>
           </div>
         ))}
+
+        {(won || lost) && (
+          <div className="end-screen">
+            {won ? "You Win!" : "You Lose!"}
+          </div>
+        )}
       </div>
       
-      {!started && (
+      {!started && !won && !lost && (
         <div className="start-screen">
           <div className="start-screen__title">PAC-MAN</div>
           <div className="start-screen__subtitle">By Sylvia</div>
@@ -275,6 +284,16 @@ export default function Game() {
         <div className="scoreboard__label">SCORE</div>
         <div className="scoreboard__value">{score}</div>
       </div>
+
+      {(won || lost) && !submitted && ( 
+        <div className="text-entry">
+          <input type="text" placeholder="Enter your name" value={playerName} onChange={e => setPlayerName(e.target.value)}/>
+          <button onClick={() => {
+            console.log(playerName, score); 
+            setSubmitted(true);
+          }}>Submit</button>
+        </div>
+      )}
 
     </div>
   );
