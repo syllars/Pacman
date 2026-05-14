@@ -1,5 +1,6 @@
 import "./styles.css";
 import { useEffect, useReducer, useRef, useCallback, memo, useState } from "react";
+import axios from 'axios'
 <link href="https://googleapis.com" rel="stylesheet"></link>
 
 // constants
@@ -183,6 +184,24 @@ export default function Game() {
   const [won, setWon] = useState(false);
   const [playerName, setPlayerName] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [leaderboardHtml, setLeaderboardHtml] = useState('');
+
+  const fetchLeaderboard = () => {
+    axios.get('http://localhost:3001/scores')
+      .then(response => {
+          setLeaderboardHtml(response.data);
+      })
+      .catch(err => {
+          console.error('Fetch failed:', err);
+      });{}
+  };
+  const submitScore = () => {
+    axios.put('http://localhost:3001/scores', { name: playerName, score: score })
+      .then(() => fetchLeaderboard())
+      .catch(err => {
+          console.error('Update failed:', err);
+      });{}
+  };
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -285,13 +304,23 @@ export default function Game() {
         <div className="scoreboard__value">{score}</div>
       </div>
 
-      {(won || lost) && !submitted && ( 
+      {(won || lost) && (
         <div className="text-entry">
-          <input type="text" placeholder="Enter your name" value={playerName} onChange={e => setPlayerName(e.target.value)}/>
-          <button onClick={() => {
-            console.log(playerName, score); 
-            setSubmitted(true);
-          }}>Submit</button>
+          {!submitted && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Enter your name"
+                  value={playerName}
+                  onChange={e => setPlayerName(e.target.value)}
+              />
+                <button onClick={() => {
+                    submitScore();
+                    setSubmitted(true);
+                }}>Submit</button>
+              </>
+            )}
+            <div className="leaderboard" dangerouslySetInnerHTML={{ __html: leaderboardHtml }} />
         </div>
       )}
 
