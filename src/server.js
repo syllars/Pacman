@@ -7,7 +7,6 @@ const cors = require('cors');
 const connectDB = require('./database');
 connectDB();
 
-// Middleware to parse JSON bodies
 app.use(express.json());
 app.use(cors());
 
@@ -18,7 +17,7 @@ app.get('/scores', (req, res) => {
         .limit(10)
         .then(docs => {
             const rows = docs.map(d => `<li>${d.name}: ${d.score}</li>`).join('');
-            res.send(`<ol>${rows}</ol>`);
+            res.send(`<h2>LEADERBOARD</h2><ol>${rows}</ol>`);
         })
         .catch(err => {
             console.log(err);
@@ -27,8 +26,7 @@ app.get('/scores', (req, res) => {
 });
 
 app.post('/scores', (req, res) => {
-  // TODO: implement POST logic
-  res.sendStatus(501); // Not Implemented
+  res.sendStatus(501);
 });
 
 app.put('/scores', (req, res) => {
@@ -39,19 +37,19 @@ app.put('/scores', (req, res) => {
     score.save()
 	.then(doc => {
   	    console.log(doc.name + " added to the database")
+        res.sendStatus(200);
 	})
 	.catch(err => {
   	    console.error(err)
+        res.status(500).send('error');
 	})
-    res.send();
+    //res.send();
 });
 
 app.delete('/scores', (req, res) => {
-  // TODO: implement DELETE logic
-  res.sendStatus(501); // Not Implemented
+  res.sendStatus(501);
 });
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
